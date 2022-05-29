@@ -1,0 +1,246 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <meta http-equiv="Content=Type" content="text/html; charset=UTF-8">
+    <title>Learning process models: Lotka-Volterra self-organization</title>
+    <!--    <link href="1_layout.css" rel="stylesheet" type="text/css">-->
+    <script language="javascript" type="text/javascript" src="flot/jquery.js"></script>
+    <script language="javascript" type="text/javascript" src="flot/jquery.flot.js"></script>
+    <script language="JavaScript" type="text/javascript" SRC="lv.js"></script>
+    <style>
+        .layer1 {
+            background-color: lightblue;
+            margin-left: 5%;
+            margin-right: 5%;
+            padding: 10px;
+        }
+
+        .layer2 {
+            margin-left: 20%;
+            background-color: #ccc;
+            padding: 10px;
+        }
+
+        td {
+            padding: 15px;
+            border: 1px solid #a52a2a;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layer1">
+        <a href=descr.htm target="_blank">Description of the Lotka-Volterra model</a>
+        <center>
+            <h3>
+                <table width=100% border=1>
+                    <tr>
+                        <th>Simulation time</th>
+                        <th>Initial conditions</th>
+                        <th>Parameter values</th>
+                    <tr>
+                        <td>
+                            <p> Tmax <input size=5 type="text" id="idtm" value="20">
+                            <p> dt &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input size=5 type="text" id="idt" value="0.001">
+                                &nbsp;&nbsp;&nbsp;<input size=5 type="hidden" id="idstep" value="10">
+                        </td>
+                        <td>
+                            <p> y1|t=0 <input size=5 type="text" id="idx" value="3">
+                            <p>y2|t=0 <input size=5 type="text" id="idy" value="1">
+                                </dt>
+                        <td>
+                            <p> x1 <input size=5 type="text" id="ida" value="4">
+                            <p> x2 <input size=5 type="text" id="idp" value="2.5">
+                            <p> x3 <input size=5 type="text" id="idk0" value="2">
+                            <p>x4 <input size=5 type="text" id="imu" value="1">
+                        </td>
+                    </tr>
+                </table>
+    </div>
+    <p>
+        <center>
+            <input type="button" id="fs" value="chart y1(t), y2(t)" onClick="cl();ode();repaint();">
+            <input type="button" id="fs" value="chart in the phase plane y2(y1)" onClick="cl();ode();phaserepaint();">
+            <p>
+            <div id="placeholder1" style="width:600px;height:300px"></div>
+            <p id="hoverdata">
+                <span id="x"></span> <span id="y"></span> <span id="clickdata"></span>
+            </p>
+        </center>
+    <p><input id="enableTooltip" type="checkbox" style="visibility:hidden" checked="true"></p>
+    <script type="text/javascript">
+        var plot;
+        function save(d) {
+            var fs = window.document.getElementById('fsrc').value;
+            var res = eval('g=' + fs);
+        }
+        function error(i) {
+            return a[i];
+        }
+        function time(i) {
+            return b[i];
+        }
+        function cuma(i) {
+            return c[i];
+        }
+        function datatime(i) {
+            return a[i];
+        }
+        function datay(i) {
+            return b[i];
+        }
+        function datay1(i) {
+            return c[i];
+        }
+        function repaint() {
+            if (max2 > 0) {
+                max2 = max2 * 1.2;
+            }
+            else {
+                max2 = max2 * 0.8;
+            }
+            if (min2 < 0) {
+                min2 = min2 * 1.2;
+            }
+            else {
+                min2 = min2 * 0.8;
+            }
+            $(function () {
+                var ftime = [], fy = [], fy1 = [];
+                for (var i = 1; i <= an; i++) {
+                    ftime.push([datatime(i), datatime(i)]);
+                    fy.push([datatime(i), datay(i)]);
+                    fy1.push([datatime(i), datay1(i)]);
+                }
+                plot = $.plot($("#placeholder1"),
+                    [{ data: fy, label: "y1" }, { data: fy1, label: "y2" }], {
+                    series: {
+                        lines: { show: true },
+                        points: { show: true }
+                    },
+                    grid: { hoverable: true, clickable: true },
+                    yaxis: { min: min2, max: max2 }
+                });
+                function showTooltip(x, y, contents) {
+                    $('<div id="tooltip">' + contents + '</div>').css({
+                        position: 'absolute',
+                        display: 'none',
+                        top: y + 5,
+                        left: x + 5,
+                        border: '1px solid #fdd',
+                        padding: '2px',
+                        'background-color': '#fee',
+                        opacity: 0.80
+                    }).appendTo("body").fadeIn(200);
+                }
+                var previousPoint = null;
+                $("#placeholder1").bind("plothover", function (event, pos, item) {
+                    $("#x").text(pos.x.toFixed(2));
+                    $("#y").text(pos.y.toFixed(2));
+                    if ($("#enableTooltip:checked").length > 0) {
+                        if (item) {
+                            if (previousPoint != item.dataIndex) {
+                                previousPoint = item.dataIndex;
+                                $("#tooltip").remove();
+                                var x = item.datapoint[0].toFixed(2),
+                                    y = item.datapoint[1].toFixed(2);
+                                showTooltip(item.pageX, item.pageY,
+                                    item.series.label + "  " + x + ",y2  " + y);
+                            }
+                        }
+                        else {
+                            $("#tooltip").remove();
+                            previousPoint = null;
+                        }
+                    }
+                });
+                $("#placeholder1").bind("plotclick", function (event, pos, item) {
+                    if (item) {
+                        $("#clickdata").text("You clicked point " + item.dataIndex + " in " + item.series.label + ".");
+                        plot.highlight(item.series, item.datapoint);
+                    }
+                });
+            });
+        }
+        function phaserepaint() {
+            if (max3 > 0) {
+                max3 = max3 * 1.2;
+            }
+            else {
+                max3 = max3 * 0.8;
+            }
+            if (min3 < 0) {
+                min3 = min3 * 1.2;
+            }
+            else {
+                min3 = min3 * 0.8;
+            }
+            $(function () {
+                var ftime = [], fy = [], fy1 = [];
+                for (var i = 1; i <= an; i++) {
+                    ftime.push([datay(i), datay1(i)]);
+                    fy.push([datatime(i), datay(i)]);
+                    fy1.push([datatime(i), datay1(i)]);
+                }
+                plot = $.plot($("#placeholder1"),
+                    [{ data: ftime, label: "y2(y1):" }], {
+                    series: {
+                        lines: { show: true },
+                        points: { show: true }
+                    },
+                    grid: { hoverable: true, clickable: true },
+                    yaxis: { min: min3, max: max3 }
+                });
+                function showTooltip(x, y, contents) {
+                    $('<div id="tooltip">' + contents + '</div>').css({
+                        position: 'absolute',
+                        display: 'none',
+                        top: y + 5,
+                        left: x + 5,
+                        border: '1px solid #fdd',
+                        padding: '2px',
+                        'background-color': '#fee',
+                        opacity: 0.80
+                    }).appendTo("body").fadeIn(200);
+                }
+                var previousPoint = null;
+                $("#placeholder1").bind("plothover", function (event, pos, item) {
+                    $("#x").text(pos.x.toFixed(2));
+                    $("#y").text(pos.y.toFixed(2));
+                    if ($("#enableTooltip:checked").length > 0) {
+                        if (item) {
+                            if (previousPoint != item.dataIndex) {
+                                previousPoint = item.dataIndex;
+                                $("#tooltip").remove();
+                                var x = item.datapoint[0].toFixed(2),
+                                    y = item.datapoint[1].toFixed(2);
+                                showTooltip(item.pageX, item.pageY,
+                                    item.series.label + " y1  " + x + ", y2 " + y);
+                            }
+                        }
+                        else {
+                            $("#tooltip").remove();
+                            previousPoint = null;
+                        }
+                    }
+                });
+                $("#placeholder1").bind("plotclick", function (event, pos, item) {
+                    if (item) {
+                        $("#clickdata").text("You clicked point " + item.dataIndex + " in " + item.series.label + ".");
+                        plot.highlight(item.series, item.datapoint);
+                    }
+                });
+            });
+        }
+    </script>
+    <p>
+    <p><input type="button" id="Data" style="visibility:visible;" value="Data" onClick="data();">
+    <p><textarea id="ta" rows="10" cols="145" name="ta"></textarea></p>
+    <p><input type="button" value="Edit ODE"
+            onClick="var fs = window.document.getElementById('fsrc');fs.value=window['g'];fs.style.visibility='visible';var fsave = window.document.getElementById('save');fsave.style.visibility='visible';">
+        <input type="button" id="save" style="visibility:hidden;" value="save ODE" onClick="save();">
+        <textarea id="fsrc" name="fsrc" rows="10" cols="145" style="visibility:hidden;"></textarea>
+</body>
+
+</html>
